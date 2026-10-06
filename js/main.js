@@ -15,6 +15,7 @@ const readingListEmpty = document.querySelector("#reading-list-empty");
 const readingListCount = document.querySelector("#reading-list-count");
 
 const OPEN_LIBRARY_API = "https://openlibrary.org/search.json";
+const STORAGE_KEY = "booktrack-reading-list";
 
 let readingList = loadReadingList();
 
@@ -22,7 +23,15 @@ searchForm.addEventListener("submit", handleSearch);
 
 function loadReadingList() {
     try {
-        return JSON.parse(localStorage.getItem("booktrack-reading-list")) || [];
+        const savedBooks = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+
+        return savedBooks.map((book) => ({
+            ...book,
+            readingStatus: book.readingStatus || "Want to Read",
+            progress: Number.isFinite(Number(book.progress))
+                ? Number(book.progress)
+                : 0,
+        }));
     } catch (error) {
         console.error("Unable to load reading list:", error);
         return [];
@@ -30,10 +39,7 @@ function loadReadingList() {
 }
 
 function saveReadingList() {
-    localStorage.setItem(
-        "booktrack-reading-list",
-        JSON.stringify(readingList)
-    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(readingList));
 }
 
 async function handleSearch(event) {
@@ -47,6 +53,8 @@ async function handleSearch(event) {
 
     setLoadingState(true);
     clearMessages();
+    bookResults.innerHTML = "";
+    resultsCount.textContent = "";
 
     try {
         const url =
@@ -89,12 +97,12 @@ function displayBooks(books) {
         `${books.length} ${books.length === 1 ? "book" : "books"}`;
 
     books.forEach((book) => {
-        const card = createBookCard(book);
+        const card = createBookCard(book, false);
         bookResults.appendChild(card);
     });
 }
 
-function createBookCard(book) {
+function createBookCard(book, isReadingListCard = false) {
     const card = document.createElement("article");
     card.className = "book-card";
 
@@ -129,6 +137,13 @@ function createBookCard(book) {
         ? `First published: ${book.first_publish_year}`
         : "Publication year unavailable";
 
+    content.append(title, author, year);
+
+    if (isReadingListCard) {
+        const tracking = createReadingProgressControls(book);
+        content.appendChild(tracking);
+    }
+
     const actions = document.createElement("div");
     actions.className = "book-actions";
 
@@ -140,9 +155,14 @@ function createBookCard(book) {
     const saveButton = document.createElement("button");
     saveButton.className = "primary-button";
     saveButton.type = "button";
-    saveButton.textContent = isInReadingList(book.key)
-        ? "Saved"
-        : "Add to List";
+
+    if (isReadingListCard) {
+        saveButton.textContent = "Remove from List";
+    } else {
+        saveButton.textContent = isInReadingList(book.key)
+            ? "Saved"
+            : "Add to List";
+    }
 
     detailsButton.addEventListener("click", () => {
         showBookDetails(book);
@@ -150,18 +170,125 @@ function createBookCard(book) {
 
     saveButton.addEventListener("click", () => {
         toggleReadingList(book);
-
-        saveButton.textContent = isInReadingList(book.key)
-            ? "Saved"
-            : "Add to List";
     });
 
     actions.append(detailsButton, saveButton);
 
-    content.append(title, author, year, actions);
+    content.appendChild(actions);
     card.append(cover, content);
 
     return card;
+}
+
+function createReadingProgressControls(book) {
+    const savedBook = readingList.find(
+        (item) => item.key === book.key
+    );
+
+    const currentStatus =
+        savedBook?.readingStatus || "Want to Read";
+
+    const currentProgress =
+        Number.isFinite(Number(savedBook?.progress))
+            ? Number(savedBook.progress)
+            : 0;
+
+    const tracking = document.createElement("div");
+    tracking.className = "reading-progress";
+
+    const statusLabel = document.createElement("label");
+    statusLabel.textContent = "Reading status";
+    statusLabel.htmlFor = `status-${sanitizeKey(book.key)}`;
+
+    const statusSelect = document.createElement("select");
+    statusSelect.id = `status-${sanitizeKey(book.key)}`;
+    statusSelect.className = "status-select";
+
+    const statuses = [
+        "Want to Read",
+        "Reading",
+        "Completed",
+    ];
+
+    statuses.forEach((status) => {
+        const option = document.createElement("option");
+        option.value = status;
+        option.textContent = status;
+
+        if (status === currentStatus) {
+            option.selected = true;
+        }
+
+        statusSelect.appendChild(option);
+    });
+
+    const progressLabel = document.createElement("label");
+    progressLabel.htmlFor = `progress-${sanitizeKey(book.key)}`;
+    progressLabel.textContent = `Reading progress: ${currentProgress}%`;
+
+    const progressRange = document.createElement("input");
+    progressRange.type = "range";
+    progressRange.id = `progress-${sanitizeKey(book.key)}`;
+    progressRange.className = "progress-range";
+    progressRange.min = "0";
+    progressRange.max = "100";
+    progressRange.step = "5";
+    progressRange.value = String(currentProgress);
+
+    statusSelect.addEventListener("change", () => {
+        updateBookTracking(book.key, {
+            readingStatus: statusSelect.value,
+        });
+
+        if (statusSelect.value === "Completed") {
+            progressRange.value = "100";
+            progressLabel.textContent = "Reading progress: 100%";
+
+            updateBookTracking(book.key, {
+                progress: 100,
+            });
+        }
+
+        saveReadingList();
+    });
+
+    progressRange.addEventListener("input", () => {
+        progressLabel.textContent =
+            `Reading progress: ${progressRange.value}%`;
+    });
+
+    progressRange.addEventListener("change", () => {
+        updateBookTracking(book.key, {
+            progress: Number(progressRange.value),
+        });
+
+        saveReadingList();
+    });
+
+    tracking.append(
+        statusLabel,
+        statusSelect,
+        progressLabel,
+        progressRange
+    );
+
+    return tracking;
+}
+
+function updateBookTracking(bookKey, changes) {
+    const book = readingList.find(
+        (item) => item.key === bookKey
+    );
+
+    if (!book) {
+        return;
+    }
+
+    Object.assign(book, changes);
+}
+
+function sanitizeKey(key) {
+    return key.replace(/[^a-zA-Z0-9-_]/g, "-");
 }
 
 function toggleReadingList(book) {
@@ -172,7 +299,11 @@ function toggleReadingList(book) {
     if (existingIndex >= 0) {
         readingList.splice(existingIndex, 1);
     } else {
-        readingList.push(book);
+        readingList.push({
+            ...book,
+            readingStatus: "Want to Read",
+            progress: 0,
+        });
     }
 
     saveReadingList();
@@ -194,12 +325,16 @@ function displayReadingList() {
     readingListEmpty.hidden = true;
 
     readingList.forEach((book) => {
-        readingListBooks.appendChild(createBookCard(book));
+        readingListBooks.appendChild(
+            createBookCard(book, true)
+        );
     });
 }
 
 function isInReadingList(bookKey) {
-    return readingList.some((book) => book.key === bookKey);
+    return readingList.some(
+        (book) => book.key === bookKey
+    );
 }
 
 function showBookDetails(book) {
