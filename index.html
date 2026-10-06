@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="description" content="BookTrack is a book discovery and reading list tracker for WDD 330.">
+
+    <title>BookTrack | Discover & Track Books</title>
+
+    <link rel="stylesheet" href="css/style.css">
+    <script type="module" src="js/main.js" defer></script>
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="container">
+            <a href="index.html" class="logo" aria-label="BookTrack home">
+                BookTrack
+            </a>
+
+            <nav class="main-nav" aria-label="Main navigation">
+                <a href="#discover">Discover</a>
+                <a href="#reading-list">My Reading List</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero" id="discover">
+            <div class="container">
+                <div class="hero-content">
+                    <p class="eyebrow">Your personal book tracker</p>
+
+                    <h1>Discover your next great book.</h1>
+
+                    <p class="hero-text">
+                        Search for books, explore new titles, and keep track of the books
+                        you want to read.
+                    </p>
+
+                    <form id="search-form" class="search-form">
+                        <label for="search-input">Search for a book</label>
+
+                        <div class="search-controls">
+                            <input type="search" id="search-input" name="search"
+                                placeholder="Try a title, author, or topic" autocomplete="off" required>
+
+                            <button type="submit" id="search-button">
+                                Search
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <section class="results-section" aria-labelledby="results-heading">
+            <div class="container">
+                <div class="section-heading">
+                    <div>
+                        <p class="section-label">Explore</p>
+                        <h2 id="results-heading">Book Results</h2>
+                    </div>
+
+                    <p id="results-count" class="results-count" aria-live="polite"></p>
+                </div>
+
+                <div id="loading-message" class="status-message" aria-live="polite" hidden>
+                    Searching for books...
+                </div>
+
+                <div id="error-message" class="status-message error" role="alert" hidden></div>
+
+                <div id="empty-message" class="status-message" aria-live="polite">
+                    Search for a book to see results.
+                </div>
+
+                <div id="book-results" class="book-grid" aria-live="polite"></div>
+            </div>
+        </section>
+
+        <section class="reading-list-section" id="reading-list" aria-labelledby="reading-list-heading">
+            <div class="container">
+                <div class="section-heading">
+                    <div>
+                        <p class="section-label">Saved Books</p>
+                        <h2 id="reading-list-heading">My Reading List</h2>
+                    </div>
+
+                    <p id="reading-list-count" class="results-count">
+                        0 books
+                    </p>
+                </div>
+
+                <div id="reading-list-empty" class="status-message">
+                    You have not added any books to your reading list yet.
+                </div>
+
+                <div id="reading-list-books" class="book-grid" aria-live="polite"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>
+                &copy; 2026 BookTrack. Built for WDD 330.
+            </p>
+        </div>
+    </footer>
+</body>
+
+</html>
