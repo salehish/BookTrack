@@ -422,3 +422,31 @@ a {
         padding: 0.75rem;
     }
 }
+
+/* Advanced CSS Animations */
+@keyframes cardEntrance {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.book-card {
+    animation: cardEntrance 0.5s ease-out both;
+}
+
+.book-card:hover {
+    transform: translateY(-6px) scale(1.01);
+    box-shadow: 0 12px 30px rgba(31, 41, 51, 0.14);
+}
+
+.status-message {
+    transition:
+        opacity 0.3s ease,
+        transform 0.3s ease;
+}

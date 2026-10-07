@@ -15,6 +15,7 @@ const readingListEmpty = document.querySelector("#reading-list-empty");
 const readingListCount = document.querySelector("#reading-list-count");
 
 const OPEN_LIBRARY_API = "https://openlibrary.org/search.json";
+const GUTENDEX_API = "https://gutendex.com/books";
 const STORAGE_KEY = "booktrack-reading-list";
 
 let readingList = loadReadingList();
@@ -39,7 +40,21 @@ function loadReadingList() {
 }
 
 function saveReadingList() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(readingList));
+    const readingListData = readingList.map((book) => ({
+        key: book.key,
+        title: book.title,
+        author_name: book.author_name || [],
+        cover_i: book.cover_i || null,
+        first_publish_year: book.first_publish_year || null,
+        subject: book.subject || [],
+        readingStatus: book.readingStatus || "Want to Read",
+        progress: Number(book.progress) || 0,
+    }));
+
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(readingListData)
+    );
 }
 
 async function handleSearch(event) {
@@ -337,7 +352,7 @@ function isInReadingList(bookKey) {
     );
 }
 
-function showBookDetails(book) {
+async function showBookDetails(book) {
     const title = book.title || "Untitled";
     const authors = book.author_name?.join(", ") || "Unknown author";
     const year = book.first_publish_year || "Unavailable";
@@ -347,12 +362,41 @@ function showBookDetails(book) {
         book.subject?.slice(0, 5).join(", ") ||
         "No subject information available.";
 
+    let gutenbergInfo =
+        "No matching Project Gutenberg edition was found.";
+
+    try {
+        const url = `${GUTENDEX_API}?search=${encodeURIComponent(title)}`;
+        const response = await fetch(url);
+
+        if (response.ok) {
+            const data = await response.json();
+
+            if (data.results && data.results.length > 0) {
+                const gutenbergBook = data.results[0];
+
+                gutenbergInfo =
+                    `Project Gutenberg edition found: ` +
+                    `${gutenbergBook.title || title}`;
+
+                if (gutenbergBook.formats?.["text/html"]) {
+                    gutenbergInfo +=
+                        `\nRead online: ${gutenbergBook.formats["text/html"]}`;
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Gutendex lookup failed:", error);
+    }
+
     alert(
         `${title}\n\n` +
         `Author: ${authors}\n` +
         `First published: ${year}\n` +
         `Pages: ${pages}\n` +
-        `Subjects: ${subjects}`
+        `Subjects: ${subjects}\n\n` +
+        `--- Project Gutenberg ---\n` +
+        `${gutenbergInfo}`
     );
 }
 
